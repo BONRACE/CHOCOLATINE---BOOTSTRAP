@@ -1,0 +1,13 @@
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04 
+
+    steps:
+    - run: date
+    - name: checkout
+      uses: actions/checkout@v4
+
