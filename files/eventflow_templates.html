@@ -1,0 +1,299 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EventFlow - Plateforme de billetterie">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="EventFlow">
+    <link rel="manifest" href="{% url 'django.views.generic.TemplateView' template_name='manifest.json' %}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%233b82f6' width='100' height='100'/><text x='50' y='65' font-size='60' font-weight='bold' fill='white' text-anchor='middle'>E</text></svg>">
+    <title>{% block title %}EventFlow{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Chart.js pour statistiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- html5-qrcode pour scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.4/dist/html5-qrcode.min.js"></script>
+    
+    {% block extra_css %}{% endblock %}
+    <style>
+        [x-cloak] { display: none; }
+        .htmx-request.htmx-settling .htmx-swapping {
+            opacity: 0;
+            transition: opacity 200ms ease-out;
+        }
+        .htmx-request.htmx-settling .htmx-swapped {
+            opacity: 1;
+            transition: opacity 200ms ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {% block content %}{% endblock %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
+
+<!-- templates/scanner/scan_interface.html -->
+{% extends 'base.html' %}
+
+{% block title %}Scanner - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 flex flex-col" data-event-id="{{ event.id }}">
+    <!-- Status Bar -->
+    <div id="status-bar" class="bg-gray-900 text-white p-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <span id="status-badge" class="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
+            <span id="status-text" class="font-semibold">En ligne</span>
+        </div>
+        <div class="text-center">
+            <h1 class="text-lg font-bold">{{ event.title }}</h1>
+        </div>
+        <div class="text-right">
+            <div class="text-2xl font-bold"><span id="scanned-count">0</span> / <span id="total-count">{{ total_tickets }}</span></div>
+            <div class="text-xs text-gray-400">Billets scannés</div>
+        </div>
+    </div>
+    
+    <!-- Camera Container -->
+    <div class="flex-1 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div id="qr-video" class="rounded-lg overflow-hidden bg-black"></div>
+        </div>
+    </div>
+    
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-sm text-center">
+            <div id="feedback-icon" class="text-5xl mb-4">✓</div>
+            <h2 id="feedback-title" class="text-2xl font-bold text-gray-900 mb-2">Participant</h2>
+            <p id="feedback-message" class="text-gray-600">Catégorie du billet</p>
+        </div>
+    </div>
+    
+    <!-- Sync Notification -->
+    <div id="sync-notification" class="fixed bottom-4 right-4 bg-green-100 text-green-800 px-6 py-3 rounded-lg shadow-lg hidden">
+        <span id="sync-text">Synchronisé</span>
+    </div>
+    
+    <!-- Offline Sync Button -->
+    {% if not scanner.is_online %}
+    <div class="fixed bottom-4 left-4 z-40">
+        <button id="sync-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+            Synchroniser
+        </button>
+    </div>
+    {% endif %}
+    
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+</div>
+
+<script>
+    // Charger html5-qrcode si pas encore fait
+    if (typeof Html5Qrcode === 'undefined') {
+        console.error('html5-qrcode library not loaded');
+    }
+</script>
+<script src="{% static 'js/scanner.js' %}"></script>
+<script src="{% static 'js/offline-sync.js' %}"></script>
+{% endblock %}
+
+
+<!-- templates/tickets/checkout.html -->
+{% extends 'base.html' %}
+
+{% block title %}Paiement - EventFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4">
+    <div class="max-w-2xl mx-auto">
+        <!-- En-tête -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Finaliser votre achat</h1>
+            <p class="text-gray-600">Vérifiez vos informations avant de payer</p>
+        </div>
+        
+        <!-- Résumé du panier -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Résumé de votre commande</h2>
+            
+            <div class="space-y-4">
+                {% for item in cart_items %}
+                <div class="flex justify-between items-center pb-4 border-b">
+                    <div>
+                        <h3 class="font-semibold text-gray-900">{{ item.category.name }}</h3>
+                        <p class="text-sm text-gray-600">{{ item.category.event.title }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-semibold">{{ item.quantity }}x {{ item.category.price }} CFA</p>
+                        <p class="text-gray-600">{{ item.quantity|mul:item.category.price }} CFA</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Total -->
+            <div class="mt-6 pt-6 border-t-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xl font-bold text-gray-900">Total</span>
+                    <span class="text-3xl font-bold text-blue-600">{{ cart.total_amount|floatformat:0 }} CFA</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulaire de paiement -->
+        <form method="post" class="bg-white rounded-lg shadow-sm p-6">
+            {% csrf_token %}
+            
+            <!-- Informations personnelles -->
+            <fieldset class="mb-8">
+                <legend class="text-lg font-bold text-gray-900 mb-4">Vos informations</legend>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    {{ form.first_name }}
+                    {{ form.last_name }}
+                </div>
+                
+                <div class="mb-4">
+                    {{ form.email }}
+                </div>
+                
+                <div class="mb-4">
+                    {{ form.email_confirm }}
+                </div>
+                
+                <div class="mb-4">
+                    {{ form.phone }}
+                </div>
+            </fieldset>
+            
+            <!-- Moyen de paiement -->
+            <fieldset class="mb-8">
+                <legend class="text-lg font-bold text-gray-900 mb-4">Moyen de paiement</legend>
+                
+                <div class="space-y-3">
+                    {% for value, label in form.payment_method.field.choices %}
+                    <label class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="payment_method" value="{{ value }}" class="form-radio">
+                        <span class="ml-3 text-gray-900 font-medium">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            
+            <!-- Conditions -->
+            <div class="mb-6">
+                <label class="flex items-start">
+                    <input type="checkbox" name="accept_terms" class="form-checkbox mt-1">
+                    <span class="ml-3 text-sm text-gray-600">
+                        J'accepte les <a href="#" class="text-blue-600 hover:underline">conditions d'utilisation</a> et la <a href="#" class="text-blue-600 hover:underline">politique de confidentialité</a>
+                    </span>
+                </label>
+                {% if form.accept_terms.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.accept_terms.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Bouton de paiement -->
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                Payer {{ cart.total_amount|floatformat:0 }} CFA
+            </button>
+            
+            <!-- Afficher les erreurs -->
+            {% if form.non_field_errors %}
+            <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                {% for error in form.non_field_errors %}
+                <p class="text-red-700 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </form>
+        
+        <!-- Retour -->
+        <div class="mt-6 text-center">
+            <a href="{% url 'core:home' %}" class="text-blue-600 hover:underline">Continuer vos achats</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+<!-- templates/core/event_detail.html (Excerpt) -->
+{% extends 'base.html' %}
+
+{% block title %}{{ event.title }} - EventFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <!-- Hero Banner -->
+    <div class="relative h-96 bg-cover bg-center" style="background-image: url('{{ event.banner_image.url }}')">
+        <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div class="absolute inset-0 flex flex-col justify-end">
+            <div class="px-6 py-8 bg-gradient-to-t from-black to-transparent">
+                <h1 class="text-4xl font-bold text-white">{{ event.title }}</h1>
+                <p class="text-xl text-gray-300 mt-2">{{ event.location }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="max-w-4xl mx-auto px-6 py-12">
+        <div class="grid grid-cols-3 gap-8 mb-12">
+            <!-- Date/Heure -->
+            <div>
+                <div class="text-gray-600 text-sm">Date & Heure</div>
+                <div class="text-xl font-bold text-gray-900">
+                    {{ event.start_date|date:"d M Y" }}<br>
+                    {{ event.start_date|time:"H:i" }}
+                </div>
+            </div>
+            
+            <!-- Lieu -->
+            <div>
+                <div class="text-gray-600 text-sm">Lieu</div>
+                <div class="text-xl font-bold text-gray-900">{{ event.location }}</div>
+            </div>
+            
+            <!-- Disponibilité -->
+            <div>
+                <div class="text-gray-600 text-sm">Disponibilité</div>
+                <div class="text-xl font-bold text-gray-900">
+                    {{ tickets_available }} places restantes
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-8">
+            <!-- Description -->
+            <div class="col-span-2">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">À propos de cet événement</h2>
+                <div class="prose prose-sm text-gray-700">{{ event.description|safe }}</div>
+            </div>
+            
+            <!-- Widget d'achat HTMX -->
+            <div class="bg-blue-50 rounded-lg p-6 sticky top-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Sélectionnez vos billets</h3>
+                
+                <div hx-get="{% url 'core:ticket_selector' event.id %}" 
+                     hx-trigger="load" 
+                     class="space-y-4">
+                    <div class="text-center text-gray-500">Chargement...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
