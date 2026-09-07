@@ -1,0 +1,216 @@
+// ==================================================
+// EVENTFLOW — SCHÉMA DE BASE DE DONNÉES (PostgreSQL / Neon)
+// ==================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- ACTEURS ----------
+
+enum UserRole {
+  ORGANIZER   // gère ses événements depuis le dashboard web
+  AGENT       // scanne les billets depuis l'app mobile/PWA
+  SUPERADMIN  // supervision plateforme
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         UserRole @default(ORGANIZER)
+  createdAt    DateTime @default(now())
+
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+
+  // un agent est rattaché à un ou plusieurs événements pour le contrôle d'accès
+  assignedEvents EventAgent[]
+
+  @@index([organizationId])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+
+  users  User[]
+  events Event[]
+}
+
+// ---------- ÉVÉNEMENTS ----------
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  description String      @db.Text
+  category    String      // ex: Concert, Festival, Conférence, Sport
+  city        String
+  venueName   String
+  address     String
+  latitude    Float?
+  longitude   Float?
+  coverImage  String
+  startsAt    DateTime
+  endsAt      DateTime
+  status      EventStatus @default(DRAFT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+
+  ticketCategories TicketCategory[]
+  orders           Order[]
+  agents           EventAgent[]
+
+  @@index([organizationId])
+  @@index([status, startsAt])
+  @@index([city, category])
+}
+
+// un agent de contrôle assigné à un événement précis (relation many-to-many)
+model EventAgent {
+  id      String @id @default(cuid())
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+  agent   User   @relation(fields: [agentId], references: [id])
+  agentId String
+
+  @@unique([eventId, agentId])
+}
+
+model TicketCategory {
+  id          String   @id @default(cuid())
+  event       Event    @relation(fields: [eventId], references: [id])
+  eventId     String
+  name        String   // ex: VIP, Standard, Early Bird
+  description String?
+  unitPrice   Int      // en FCFA, entier — pas de sous-unité
+  quantity    Int      // jauge maximale dédiée
+  quantitySold Int     @default(0)
+  salesStart  DateTime?
+  salesEnd    DateTime?
+
+  orderItems OrderItem[]
+
+  @@index([eventId])
+}
+
+// ---------- COMMANDES & PARTICIPANTS ----------
+
+enum OrderStatus {
+  PENDING     // en attente de paiement
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CARD
+  MTN_MOMO
+  MOOV_MONEY
+  ORANGE_MONEY
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  event         Event         @relation(fields: [eventId], references: [id])
+  eventId       String
+  buyerFullName String
+  buyerEmail    String
+  buyerPhone    String
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod?
+  paymentRef    String?       // référence transaction Stripe / CinetPay / FedaPay
+  totalAmount   Int           // en FCFA
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+
+  items   OrderItem[]
+  tickets Ticket[]
+
+  @@index([eventId, status])
+  @@index([buyerEmail])
+}
+
+model OrderItem {
+  id               String         @id @default(cuid())
+  order            Order          @relation(fields: [orderId], references: [id])
+  orderId          String
+  ticketCategory   TicketCategory @relation(fields: [ticketCategoryId], references: [id])
+  ticketCategoryId String
+  quantity         Int
+  unitPrice        Int            // prix figé au moment de l'achat
+
+  @@index([orderId])
+}
+
+// un Ticket = un billet nominatif individuel scannable (1 QR code unique)
+enum TicketStatus {
+  VALID
+  SCANNED
+  CANCELLED
+}
+
+model Ticket {
+  id             String       @id @default(cuid())
+  order          Order        @relation(fields: [orderId], references: [id])
+  orderId        String
+  qrSecret       String       @unique // payload signé encodé dans le QR code
+  status         TicketStatus @default(VALID)
+  holderName     String?      // peut être personnalisé après achat
+  scannedAt      DateTime?
+  scannedBy      String?      // id de l'agent
+  createdAt      DateTime     @default(now())
+
+  scanLogs ScanLog[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// ---------- CONTRÔLE D'ACCÈS / SCAN (traçabilité + support offline) ----------
+
+enum ScanResult {
+  VALID
+  ALREADY_SCANNED
+  NOT_FOUND
+  WRONG_EVENT
+  CANCELLED_TICKET
+}
+
+model ScanLog {
+  id         String     @id @default(cuid())
+  ticket     Ticket?    @relation(fields: [ticketId], references: [id])
+  ticketId   String?
+  eventId    String     // toujours renseigné, même si le billet est introuvable
+  agentId    String
+  result     ScanResult
+  scannedAt  DateTime   @default(now())
+  // Un scan peut avoir été fait hors-ligne sur l'app mobile puis synchronisé plus tard :
+  offlineId  String?    @unique // id local généré côté SQLite pour dédupliquer à la sync
+  syncedAt   DateTime?
+
+  @@index([eventId, scannedAt])
+  @@index([ticketId])
+}

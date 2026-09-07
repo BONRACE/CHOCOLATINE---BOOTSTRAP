@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #F6F2E7;
+  color: #12241C;
+}
+
+/* Focus visibility kept intentional, not suppressed */
+:focus-visible {
+  outline: 2px solid #D4A62F;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Ticket-stub notch: two half-circles cut into the left/right edge of a card,
+   evoking a physical perforated ticket. Used sparingly — the event card only. */
+.ticket-notch::before,
+.ticket-notch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  background: #F6F2E7;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+.ticket-notch::before {
+  left: -10px;
+}
+.ticket-notch::after {
+  right: -10px;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.perforation {
+  background-image: repeating-linear-gradient(
+    90deg,
+    #DCD3BE,
+    #DCD3BE 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  height: 1px;
+}
