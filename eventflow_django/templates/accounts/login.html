@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Connexion organisateur — EventFlow{% endblock %}
+
+{% block content %}
+<main class="flex min-h-screen items-center justify-center bg-forest px-6">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <p class="font-mono text-xs uppercase tracking-[0.16em] text-gold/80">Espace organisateur</p>
+      <h1 class="mt-2 font-display text-2xl italic text-ivory">Connexion</h1>
+    </div>
+
+    {% if error %}
+      <p class="mb-4 rounded-lg bg-coral/15 px-4 py-2.5 text-sm text-coral">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" class="space-y-4 rounded-stub border border-ivory/10 bg-forest-dark/60 p-5">
+      {% csrf_token %}
+      <div>
+        <label class="text-xs font-medium text-ivory/60">Nom d'utilisateur</label>
+        <input name="username" required class="mt-1.5 w-full rounded-lg border border-ivory/15 bg-forest-dark px-3.5 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-2 focus:ring-gold/50" placeholder="organisateur">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ivory/60">Mot de passe</label>
+        <input type="password" name="password" required class="mt-1.5 w-full rounded-lg border border-ivory/15 bg-forest-dark px-3.5 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-2 focus:ring-gold/50" placeholder="••••••••">
+      </div>
+      <button type="submit" class="w-full rounded-full bg-gold py-3 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+        Se connecter
+      </button>
+    </form>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan — {{ event.title }}</title>
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#0B4A32">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: {
+        forest: { DEFAULT: "#0B4A32", dark: "#082F20", light: "#14684A" },
+        gold: { DEFAULT: "#D4A62F", pale: "#F0DFA6" },
+        ivory: "#F6F2E7", coral: "#E2572B",
+      },
+      fontFamily: { display: ["Fraunces", "serif"], body: ["Inter", "sans-serif"], mono: ["IBM Plex Mono", "monospace"] },
+      borderRadius: { stub: "20px" },
+    } } };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital@0;1&family=Inter:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="min-h-screen bg-forest-dark font-body text-ivory">
+
+<main class="relative flex min-h-screen flex-col">
+  <!-- Barre de statut -->
+  <div class="flex items-center justify-between px-5 py-4">
+    <div>
+      <p class="text-xs text-ivory/50">{{ event.title }}</p>
+      <p class="font-mono text-sm" id="scan-counter">{{ scanned_count }} / {{ total }} scannés</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="sync-btn" class="hidden items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-xs text-gold">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M4 4v5h5M20 20v-5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="sync-count">0</span> en attente
+      </button>
+      <span id="network-badge" class="flex items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-xs font-medium text-ivory/80">
+        En ligne
+      </span>
+    </div>
+  </div>
+
+  <!-- Viseur caméra -->
+  <div class="relative mx-6 mt-2 flex flex-1 flex-col items-center justify-center overflow-hidden rounded-stub border border-ivory/10 bg-black/40">
+    <div id="qr-reader" class="w-full max-w-sm"></div>
+    <p class="mt-3 text-xs text-ivory/40">Visez le QR code du billet</p>
+  </div>
+
+  <p class="px-6 py-6 text-center text-xs text-ivory/30">
+    L'accès caméra nécessite une connexion HTTPS (ou localhost) et votre autorisation navigateur.
+  </p>
+
+  <!-- Modale de feedback plein écran -->
+  <div id="feedback-overlay" class="absolute inset-0 hidden flex-col items-center justify-center gap-4">
+    <svg id="feedback-icon-valid" class="hidden" width="72" height="72" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.6"/><path d="m8 12.5 2.5 2.5L16 9.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg id="feedback-icon-invalid" class="hidden" width="72" height="72" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.6"/><path d="m9 9 6 6m0-6-6 6" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <p id="feedback-title" class="max-w-[240px] text-center font-display text-2xl italic text-ivory"></p>
+    <p id="feedback-subtitle" class="text-sm text-ivory/70"></p>
+  </div>
+</main>
+
+<script>
+  const EVENT_ID = "{{ event.id }}";
+  const VERIFY_URL = "{% url 'scanner:verify_scan' %}";
+  const MANIFEST_URL = "{% url 'scanner:offline_manifest' event.id %}";
+  const SYNC_URL = "{% url 'scanner:sync_scans' %}";
+  const CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+<script src="{% static 'js/scanner.js' %}"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("{% static 'js/service-worker.js' %}");
+  }
+</script>
+</body>
+</html>

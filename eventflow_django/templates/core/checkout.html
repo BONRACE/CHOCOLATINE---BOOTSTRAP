@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Paiement — {{ event.title }}{% endblock %}
+
+{% block content %}
+{% include "components/header.html" %}
+
+<section class="mx-auto grid max-w-4xl gap-10 px-6 py-12 md:grid-cols-[1.3fr_1fr]">
+  <form method="post" class="space-y-8">
+    {% csrf_token %}
+    <div>
+      <p class="font-mono text-xs uppercase tracking-wide text-forest">Étape unique &middot; Aucun compte requis</p>
+      <h1 class="mt-2 font-display text-2xl text-ink">Vos informations</h1>
+    </div>
+
+    <div class="space-y-4 rounded-stub border border-line bg-white p-5">
+      <div>
+        <label class="text-sm font-medium text-ink" for="{{ form.full_name.id_for_label }}">Nom complet</label>
+        {{ form.full_name }}
+        {% for error in form.full_name.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="text-sm font-medium text-ink" for="{{ form.email.id_for_label }}">Email</label>
+          {{ form.email }}
+        </div>
+        <div>
+          <label class="text-sm font-medium text-ink" for="{{ form.email_confirm.id_for_label }}">Confirmer l'email</label>
+          {{ form.email_confirm }}
+          {% for error in form.email_confirm.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-ink" for="{{ form.phone.id_for_label }}">Téléphone</label>
+        {{ form.phone }}
+        {% for error in form.phone.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <h2 class="font-display text-xl text-ink">Paiement</h2>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        {% for radio in form.payment_method %}
+          <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-line bg-white p-3.5 has-[:checked]:border-forest has-[:checked]:bg-forest/5">
+            {{ radio.tag }}
+            <span class="text-sm font-medium text-ink">{{ radio.choice_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" class="w-full rounded-full bg-forest py-3.5 text-sm font-medium text-ivory transition-colors hover:bg-forest-light">
+      Payer {{ total|intcomma }} FCFA
+    </button>
+  </form>
+
+  <aside class="h-fit rounded-stub border border-line bg-white p-5">
+    <h2 class="font-display text-lg text-ink">{{ event.title }}</h2>
+    <p class="mt-1 text-xs text-ink/50">{{ event.venue_name }}, {{ event.city }}</p>
+    <div class="mt-4 divide-y divide-line">
+      {% for line in lines %}
+        <div class="flex justify-between py-2 text-sm">
+          <span class="text-ink/70">{{ line.qty }} &times; {{ line.category.name }}</span>
+          <span class="font-mono text-ink">{{ line.line_total|intcomma }} FCFA</span>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="mt-3 flex justify-between border-t border-line pt-3">
+      <span class="text-sm font-medium text-ink">Total</span>
+      <span class="font-mono text-base font-medium text-forest">{{ total|intcomma }} FCFA</span>
+    </div>
+  </aside>
+</section>
+
+{% include "components/footer.html" %}
+{% endblock %}

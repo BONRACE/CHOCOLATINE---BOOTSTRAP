@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Créer un événement — Étape 2{% endblock %}
+
+{% block content %}
+<header class="border-b border-line bg-white">
+  <div class="mx-auto max-w-3xl px-6 py-5">
+    <p class="font-mono text-xs uppercase tracking-wide text-ink/40">Espace organisateur</p>
+    <h1 class="font-display text-xl text-ink">{{ event.title }}</h1>
+  </div>
+</header>
+
+<div class="mx-auto max-w-3xl px-6 pt-6">
+  <div class="flex items-center gap-2">
+    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest font-mono text-xs text-ivory">&#10003;</div>
+    <span class="text-sm text-ink/40">Informations générales</span>
+    <div class="mx-2 h-px flex-1 bg-line"></div>
+    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest font-mono text-xs text-ivory">2</div>
+    <span class="text-sm font-medium text-ink">Billetterie</span>
+  </div>
+</div>
+
+<section class="mx-auto max-w-3xl px-6 py-8">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    <div class="rounded-stub border border-line bg-white p-6">
+      <h2 class="font-display text-lg text-ink">Catégories de billets</h2>
+      <div id="formset-rows" class="mt-4 space-y-3">
+        {% for tc_form in formset %}
+          <div class="formset-row grid grid-cols-[1.2fr_1fr_1fr_auto] items-end gap-3 border-b border-line pb-3 last:border-0">
+            {{ tc_form.id }}
+            <div>
+              <label class="text-xs text-ink/50">Nom</label>
+              {{ tc_form.name }}
+            </div>
+            <div>
+              <label class="text-xs text-ink/50">Prix (FCFA)</label>
+              {{ tc_form.unit_price }}
+            </div>
+            <div>
+              <label class="text-xs text-ink/50">Jauge</label>
+              {{ tc_form.quantity }}
+            </div>
+            {% if tc_form.instance.pk %}
+              <label class="mb-2 flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink/40 hover:bg-coral/5 hover:text-coral">
+                {{ tc_form.DELETE }}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-8 0 1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </label>
+            {% else %}
+              <div></div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button type="button" id="add-category-row" class="mt-4 flex items-center gap-1.5 text-sm font-medium text-forest hover:text-forest-light">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Ajouter une catégorie
+      </button>
+      <p class="mt-2 text-xs text-ink/40">
+        Ajoutez autant de catégories que nécessaire, puis publiez l'événement.
+      </p>
+    </div>
+
+    <div class="flex justify-between pt-2">
+      <button type="submit" class="rounded-full border border-line px-5 py-2.5 text-sm text-ink/60 hover:bg-ivory">
+        Enregistrer
+      </button>
+      <button type="submit" name="publish" value="1" class="rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-forest-dark hover:bg-gold-pale">
+        Publier l'événement
+      </button>
+    </div>
+  </form>
+</section>
+
+<script>
+  // Formset dynamique : clone la dernière ligne côté client et met à jour
+  // les index des champs + TOTAL_FORMS, sans rechargement de page. La ligne
+  // clonée est vide (nouvelle catégorie) — Django gère la validation/insertion
+  // normalement à la soumission du formulaire.
+  document.getElementById('add-category-row').addEventListener('click', () => {
+    const rows = document.getElementById('formset-rows');
+    const totalInput = document.querySelector('#id_tc-TOTAL_FORMS');
+    const index = parseInt(totalInput.value, 10);
+    const template = rows.querySelector('.formset-row');
+    const clone = template.cloneNode(true);
+
+    clone.querySelectorAll('input, select').forEach((field) => {
+      const name = field.getAttribute('name');
+      if (!name) return;
+      const newName = name.replace(/tc-\d+-/, `tc-${index}-`);
+      const newId = `id_${newName}`;
+      field.setAttribute('name', newName);
+      field.setAttribute('id', newId);
+      if (field.type === 'checkbox') {
+        field.checked = false;
+      } else if (field.type !== 'hidden') {
+        field.value = '';
+      }
+    });
+
+    rows.appendChild(clone);
+    totalInput.value = index + 1;
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+<header class="sticky top-0 z-30 border-b border-forest-dark/40 bg-forest/95 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <a href="{% url 'core:home' %}" class="flex items-center gap-2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 8.5C3 6.567 4.567 5 6.5 5h11A2.5 2.5 0 0 1 20 7.5v1a1.75 1.75 0 0 0 0 3.5v1A2.5 2.5 0 0 1 17.5 15h-11A2.5 2.5 0 0 1 4 12.5v-1a1.75 1.75 0 0 0 0-3.5v-1Z" stroke="#D4A62F" stroke-width="1.4"/>
+        <path d="M9 5v10" stroke="#D4A62F" stroke-width="1.4" stroke-dasharray="2 2"/>
+      </svg>
+      <span class="font-display text-lg italic text-ivory">EventFlow</span>
+    </a>
+    <nav class="hidden items-center gap-7 text-sm text-ivory/80 md:flex">
+      <a href="{% url 'core:home' %}" class="hover:text-gold">Découvrir</a>
+      <a href="{% url 'events:dashboard' %}" class="hover:text-gold">Espace organisateur</a>
+      <a href="{% url 'scanner:login' %}" class="hover:text-gold">Scanner d'accès</a>
+    </nav>
+    <a href="{% url 'events:event_create_step1' %}" class="rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+      Créer un événement
+    </a>
+  </div>
+</header>

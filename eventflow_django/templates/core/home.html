@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}EventFlow — Trouvez votre prochaine sortie{% endblock %}
+
+{% block content %}
+{% include "components/header.html" %}
+
+<section class="relative overflow-hidden bg-forest">
+  <div class="mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-14 md:grid-cols-[1.1fr_0.9fr] md:pb-24 md:pt-20">
+    <div class="animate-fade-up">
+      <p class="font-mono text-xs uppercase tracking-[0.16em] text-gold/80">Bénin &middot; Billetterie en ligne</p>
+      <h1 class="mt-4 max-w-lg font-display text-4xl italic leading-[1.1] text-ivory md:text-5xl">
+        Votre prochaine sortie tient dans un billet.
+      </h1>
+      <p class="mt-5 max-w-md text-[15px] leading-relaxed text-ivory/70">
+        Concerts, festivals, conférences et matchs — trouvez l'événement,
+        réservez en Mobile Money ou carte, et présentez simplement votre
+        QR code à l'entrée.
+      </p>
+
+      <div class="mt-8 flex max-w-md items-center gap-2 rounded-full border border-gold/30 bg-forest-dark/60 p-1.5 pl-4">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" class="shrink-0 text-gold/70"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input
+          type="text" name="q" id="search-input"
+          placeholder="Un artiste, une salle, une ville…"
+          class="w-full bg-transparent py-2 text-sm text-ivory placeholder:text-ivory/40 focus:outline-none"
+          hx-get="{% url 'core:event_grid' %}"
+          hx-trigger="keyup changed delay:300ms"
+          hx-target="#event-grid"
+          hx-include="#filters"
+        >
+        <button type="button" class="shrink-0 rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+          Chercher
+        </button>
+      </div>
+    </div>
+
+    <div class="relative hidden items-center justify-center md:flex">
+      <div class="relative w-64 rotate-[6deg] rounded-stub border border-gold/25 bg-forest-dark/70 p-5 shadow-2xl">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-gold/60">Accès général</p>
+        <p class="mt-2 font-display text-2xl italic text-ivory">Afro Nation</p>
+        <p class="mt-1 text-xs text-ivory/50">Fidjrossè, Cotonou</p>
+        <div class="my-4 h-px w-full bg-[repeating-linear-gradient(90deg,transparent,transparent_5px,rgba(212,166,47,0.4)_5px,rgba(212,166,47,0.4)_9px)]"></div>
+        <div class="flex items-end justify-between">
+          <div>
+            <p class="font-mono text-[10px] text-gold/60">PORTE</p>
+            <p class="font-display text-lg text-ivory">B</p>
+          </div>
+          <div class="h-12 w-12 rounded bg-ivory/90 p-1">
+            <div class="h-full w-full bg-[repeating-linear-gradient(90deg,#12241C,#12241C_2px,transparent_2px,transparent_4px)]"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-b border-line bg-ivory">
+  <form id="filters" class="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-6 py-4">
+    <button type="button"
+      class="filter-pill rounded-full px-3.5 py-1.5 text-sm transition-colors {% if not active_category %}bg-forest text-ivory{% else %}bg-white text-ink/70 hover:bg-forest/10{% endif %}"
+      hx-get="{% url 'core:event_grid' %}" hx-target="#event-grid" hx-include="#filters"
+      onclick="document.getElementById('category-field').value=''; document.getElementById('search-input').value ? null : null;"
+      name="category" value="">
+      Tout
+    </button>
+    {% for c in categories %}
+      <button type="button"
+        class="filter-pill rounded-full px-3.5 py-1.5 text-sm transition-colors {% if active_category == c %}bg-forest text-ivory{% else %}bg-white text-ink/70 hover:bg-forest/10{% endif %}"
+        hx-get="{% url 'core:event_grid' %}" hx-target="#event-grid" hx-include="#filters"
+        onclick="document.getElementById('category-field').value='{{ c }}';">
+        {{ c }}
+      </button>
+    {% endfor %}
+    <input type="hidden" id="category-field" name="category" value="{{ active_category }}">
+    <input type="hidden" name="q" value="{{ query }}" id="q-field">
+
+    <span class="mx-1 h-5 w-px bg-line" aria-hidden="true"></span>
+
+    <select name="city"
+      class="rounded-full border border-line bg-white px-3.5 py-1.5 text-sm text-ink/70 focus:outline-none"
+      hx-get="{% url 'core:event_grid' %}" hx-target="#event-grid" hx-include="#filters" hx-trigger="change">
+      <option value="">Toutes les villes</option>
+      {% for c in cities %}
+        <option value="{{ c }}" {% if active_city == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</section>
+
+<section class="mx-auto max-w-6xl px-6 py-10">
+  <div id="event-grid">
+    {% include "core/_event_grid.html" %}
+  </div>
+</section>
+
+{% include "components/footer.html" %}
+
+<script>
+  // Synchronise la saisie de recherche avec le champ caché du formulaire de
+  // filtres, pour que hx-include="#filters" transmette bien `q` avec les
+  // clics sur les pastilles de catégorie / le select ville.
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    document.getElementById('q-field').value = e.target.value;
+  });
+</script>
+{% endblock %}

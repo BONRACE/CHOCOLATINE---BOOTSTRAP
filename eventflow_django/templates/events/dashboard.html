@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Tableau de bord — EventFlow{% endblock %}
+
+{% block content %}
+<header class="border-b border-line bg-white">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <div>
+      <p class="font-mono text-xs uppercase tracking-wide text-ink/40">Espace organisateur</p>
+      <h1 class="font-display text-xl text-ink">Tableau de bord</h1>
+    </div>
+    <a href="{% url 'events:event_create_step1' %}" class="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-sm font-medium text-ivory hover:bg-forest-light">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Nouvel événement
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="ml-3 text-sm text-ink/40 hover:text-ink">Déconnexion</a>
+  </div>
+</header>
+
+<section class="mx-auto max-w-6xl px-6 py-8">
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="rounded-stub border border-line bg-white p-5">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-forest"><path d="M4 17V9a2 2 0 0 1 2-2h2V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8" stroke="currentColor" stroke-width="1.6"/></svg>
+      <p class="mt-3 font-display text-2xl text-ink">{{ total_sold|intcomma }}</p>
+      <p class="mt-1 text-sm text-ink/50">Billets vendus</p>
+    </div>
+    <div class="rounded-stub border border-line bg-white p-5">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-forest"><path d="M3 17l4-6 4 3 6-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p class="mt-3 font-display text-2xl text-ink">{{ total_revenue|intcomma }} FCFA</p>
+      <p class="mt-1 text-sm text-ink/50">Chiffre d'affaires</p>
+    </div>
+    <div class="rounded-stub border border-line bg-white p-5">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-forest"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 3a9 9 0 0 1 0 18" stroke="currentColor" stroke-width="1.6"/></svg>
+      <p class="mt-3 font-display text-2xl text-ink">{{ avg_fill_rate }}%</p>
+      <p class="mt-1 text-sm text-ink/50">Taux de remplissage moyen</p>
+    </div>
+  </div>
+
+  <div class="mt-8 overflow-hidden rounded-stub border border-line bg-white">
+    <div class="flex items-center justify-between border-b border-line px-5 py-4">
+      <h2 class="font-display text-lg text-ink">Événements récents et à venir</h2>
+    </div>
+    <table class="w-full text-left text-sm">
+      <thead class="bg-forest/5 text-xs uppercase tracking-wide text-ink/50">
+        <tr>
+          <th class="px-5 py-3 font-medium">Événement</th>
+          <th class="px-5 py-3 font-medium">Date</th>
+          <th class="px-5 py-3 font-medium">Ville</th>
+          <th class="px-5 py-3 font-medium">Remplissage</th>
+          <th class="px-5 py-3 font-medium">Statut</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-line">
+        {% for event in events %}
+          <tr class="hover:bg-forest/5">
+            <td class="px-5 py-3">
+              <a href="{% url 'events:event_manage' event.id %}" class="font-medium text-ink hover:text-forest">{{ event.title }}</a>
+            </td>
+            <td class="px-5 py-3 text-ink/60">{{ event.starts_at|date:"d/m/Y" }}</td>
+            <td class="px-5 py-3 text-ink/60">{{ event.city }}</td>
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 w-24 overflow-hidden rounded-full bg-line">
+                  <div class="h-full bg-gold" style="width: {{ event.fill_rate }}%"></div>
+                </div>
+                <span class="text-xs text-ink/50">{{ event.fill_rate }}%</span>
+              </div>
+            </td>
+            <td class="px-5 py-3">
+              <span class="rounded-full bg-forest/10 px-2.5 py-1 text-xs font-medium text-forest">{{ event.get_status_display }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="px-5 py-8 text-center text-ink/40">Aucun événement pour l'instant.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
