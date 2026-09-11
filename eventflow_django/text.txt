@@ -1,0 +1,7 @@
+ce qu'on doit corriger 
+maintenant il y aura deux comptes : un comptes orgasateur qui puiblic l'evernement et un comptes spertateur qui veux suivre l'evernement
+role de chaque comptes
+comptes orgasateur doit s'inscrire en tant que orgasateur d'evernement puis puiblier son evernement
+comptes spertateur doit s'inscrire en tant spertateur puis acheter un visaticket electronique
+Dans le cas ou il veux acheter de ticket pour 4 personne de ça famille 
+tu respecte les meme condition juste tu met la caze de photo de famille

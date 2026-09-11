@@ -11,8 +11,6 @@ from django.views.decorators.http import require_POST
 
 from apps.events.models import Event, EventAgent
 from apps.tickets.models import Ticket
-from apps.tickets.services import build_offline_manifest, verify_payload
-
 from .models import ScanLog
 
 
@@ -29,7 +27,7 @@ def agent_login(request):
     """3.1 — Connexion agent + sélection de l'événement à contrôler."""
     events = Event.objects.filter(status=Event.Status.PUBLISHED).order_by("starts_at")
     error = None
-
++3
     if request.method == "POST":
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")

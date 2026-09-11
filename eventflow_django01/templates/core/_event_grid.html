@@ -1,0 +1,21 @@
+<div class="mb-6 flex items-baseline justify-between">
+  <h2 class="font-display text-2xl text-ink">
+    {% if events %}
+      {{ events|length }} événement{{ events|length|pluralize }} à découvrir
+    {% else %}
+      Aucun événement trouvé
+    {% endif %}
+  </h2>
+</div>
+
+{% if events %}
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {% for event in events %}
+      {% include "components/event_card.html" %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="rounded-stub border border-dashed border-line bg-white/60 px-6 py-16 text-center">
+    <p class="text-ink/60">Essayez un autre mot-clé, ou changez de ville et de catégorie.</p>
+  </div>
+{% endif %}

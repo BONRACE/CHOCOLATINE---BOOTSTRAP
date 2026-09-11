@@ -1,0 +1,57 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion agent — EventFlow Scan</title>
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#0B4A32">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { forest: { DEFAULT: "#0B4A32", dark: "#082F20", light: "#14684A" }, gold: { DEFAULT: "#D4A62F", pale: "#F0DFA6" }, ivory: "#F6F2E7" },
+      fontFamily: { display: ["Fraunces", "serif"], body: ["Inter", "sans-serif"] },
+      borderRadius: { stub: "20px" },
+    } } };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-forest-dark px-6 font-body">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 flex flex-col items-center text-center">
+      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-gold"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M8 13h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="mt-4 font-display text-2xl italic text-ivory">Contrôle d'accès</h1>
+      <p class="mt-1 text-sm text-ivory/50">Connexion agent — EventFlow Scan</p>
+    </div>
+
+    {% if error %}
+      <p class="mb-4 rounded-lg bg-coral/15 px-4 py-2.5 text-sm text-coral">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" class="space-y-4 rounded-stub border border-ivory/10 bg-forest p-5">
+      {% csrf_token %}
+      <div>
+        <label class="text-xs font-medium text-ivory/60">Nom d'utilisateur</label>
+        <input name="username" required class="mt-1.5 w-full rounded-lg border border-ivory/15 bg-forest-dark px-3.5 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-2 focus:ring-gold/50" placeholder="agent.cotonou">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ivory/60">Mot de passe</label>
+        <input type="password" name="password" required class="mt-1.5 w-full rounded-lg border border-ivory/15 bg-forest-dark px-3.5 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-2 focus:ring-gold/50" placeholder="••••••••">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ivory/60">Événement à contrôler</label>
+        <select name="event_id" required class="mt-1.5 w-full rounded-lg border border-ivory/15 bg-forest-dark px-3.5 py-2.5 text-sm text-ivory focus:outline-none focus:ring-2 focus:ring-gold/50">
+          {% for event in events %}
+            <option value="{{ event.id }}">{{ event.title }} — {{ event.starts_at|date:"d/m/Y" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="w-full rounded-full bg-gold py-3 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+        Démarrer le contrôle
+      </button>
+    </form>
+  </div>
+</body>
+</html>

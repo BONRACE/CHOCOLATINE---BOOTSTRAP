@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Confirmation — {{ order.event.title }}{% endblock %}
+
+{% block content %}
+{% include "components/header.html" %}
+
+<section class="mx-auto max-w-lg px-6 py-14 text-center">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="mx-auto text-forest"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><path d="m8 12.5 2.5 2.5L16 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h1 class="mt-4 font-display text-2xl text-ink">Commande confirmée</h1>
+  <p class="mt-2 text-sm text-ink/60">
+    Vos billets ont été envoyés par email. Vous pouvez aussi les télécharger ci-dessous.
+  </p>
+
+  {% for item in tickets %}
+    <div class="ticket-notch relative mx-auto mt-8 max-w-sm overflow-hidden rounded-stub border border-line bg-white text-left shadow-lg">
+      <div class="bg-forest px-6 py-4">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-gold/70">{{ order.event.category }}</p>
+        <p class="mt-1 font-display text-xl italic text-ivory">{{ order.event.title }}</p>
+        <p class="mt-1 text-xs text-ivory/60">{{ order.event.starts_at|date:"l d F" }} &middot; {{ order.event.venue_name }}</p>
+      </div>
+      <div class="perforation"></div>
+      <div class="flex flex-col items-center gap-3 px-6 py-5">
+        {% if item.ticket.holder_photo %}
+          <img src="{{ item.ticket.holder_photo.url }}" alt="" class="h-16 w-16 rounded-full border-2 border-gold object-cover">
+        {% else %}
+          <div class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gold/40 bg-forest/5 text-lg font-display italic text-forest/50">
+            {{ item.ticket.holder_first_name|slice:":1" }}{{ item.ticket.holder_last_name|slice:":1" }}
+          </div>
+        {% endif %}
+        <p class="font-display text-lg text-ink">{{ item.ticket.holder_full_name }}</p>
+        <div class="flex flex-wrap items-center justify-center gap-1.5 text-xs text-ink/50">
+          <span class="rounded-full bg-forest/10 px-2.5 py-1 font-medium text-forest">{{ item.ticket.ticket_category.name }}</span>
+          {% if item.ticket.holder_profession %}<span>{{ item.ticket.get_holder_profession_display_label }}</span>{% endif %}
+          {% if item.ticket.holder_city %}<span>&middot; {{ item.ticket.holder_city }}, {{ item.ticket.holder_country }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="perforation"></div>
+      <div class="flex flex-col items-center gap-3 px-6 py-6">
+        <img src="{% url 'core:ticket_qr' item.ticket.id %}" alt="QR code du billet" class="h-40 w-40">
+        <p class="font-mono text-sm tracking-widest text-ink/70">EVF-{{ item.ticket.id|stringformat:"s"|slice:"-6:"|upper }}</p>
+      </div>
+      <div class="flex justify-center border-t border-line px-6 py-4">
+        <a href="{% url 'core:ticket_pdf' item.ticket.id %}" class="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-forest-light">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Télécharger le billet (PDF)
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+{% include "components/footer.html" %}
+{% endblock %}

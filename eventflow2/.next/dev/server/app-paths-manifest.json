@@ -1,7 +1,0 @@
-{
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/evenements/nouveau/page": "app/admin/evenements/nouveau/page.js",
-  "/connexion/page": "app/connexion/page.js",
-  "/evenements/[slug]/page": "app/evenements/[slug]/page.js",
-  "/page": "app/page.js"
-}

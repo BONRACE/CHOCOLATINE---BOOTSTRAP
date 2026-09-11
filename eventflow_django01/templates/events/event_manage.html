@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — Gestion{% endblock %}
+
+{% block content %}
+<header class="border-b border-line bg-white">
+  <div class="mx-auto max-w-6xl px-6 py-5">
+    <p class="font-mono text-xs uppercase tracking-wide text-ink/40">{{ event.city }} &middot; {{ event.starts_at|date:"d/m/Y" }}</p>
+    <h1 class="font-display text-xl text-ink">{{ event.title }}</h1>
+  </div>
+  <div class="mx-auto flex max-w-6xl gap-1 px-6">
+    <a href="?tab=participants" class="border-b-2 px-3 py-2.5 text-sm {% if tab == 'participants' %}border-forest font-medium text-forest{% else %}border-transparent text-ink/50 hover:text-ink{% endif %}">
+      Participants
+    </a>
+    <a href="?tab=stats" class="border-b-2 px-3 py-2.5 text-sm {% if tab == 'stats' %}border-forest font-medium text-forest{% else %}border-transparent text-ink/50 hover:text-ink{% endif %}">
+      Statistiques en direct
+    </a>
+    <a href="?tab=export" class="border-b-2 px-3 py-2.5 text-sm {% if tab == 'export' %}border-forest font-medium text-forest{% else %}border-transparent text-ink/50 hover:text-ink{% endif %}">
+      Export
+    </a>
+  </div>
+</header>
+
+<section class="mx-auto max-w-6xl px-6 py-8">
+  {% if tab == "participants" %}
+    <div class="rounded-stub border border-line bg-white">
+      <div class="flex flex-wrap items-center gap-3 border-b border-line p-4">
+        <div class="flex items-center gap-2 rounded-full border border-line px-3 py-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-ink/40"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input
+            type="text" placeholder="Rechercher un participant…"
+            class="w-48 bg-transparent text-sm focus:outline-none"
+            name="q"
+            hx-get="{% url 'events:participants_table' event.id %}"
+            hx-trigger="keyup changed delay:300ms"
+            hx-target="#participants-table"
+            hx-include="#status-field"
+          >
+        </div>
+        <div class="flex gap-1.5" id="status-buttons">
+          <button type="button" class="status-pill rounded-full bg-forest px-3 py-1.5 text-xs text-ivory"
+            hx-get="{% url 'events:participants_table' event.id %}" hx-target="#participants-table"
+            onclick="document.getElementById('status-field').value='';">Tous</button>
+          <button type="button" class="status-pill rounded-full bg-forest/5 px-3 py-1.5 text-xs text-ink/60 hover:bg-forest/10"
+            hx-get="{% url 'events:participants_table' event.id %}" hx-target="#participants-table" hx-vals='{"status": "Payé"}'
+            onclick="document.getElementById('status-field').value='Payé';">Payé</button>
+          <button type="button" class="status-pill rounded-full bg-forest/5 px-3 py-1.5 text-xs text-ink/60 hover:bg-forest/10"
+            hx-get="{% url 'events:participants_table' event.id %}" hx-target="#participants-table" hx-vals='{"status": "Scanné"}'
+            onclick="document.getElementById('status-field').value='Scanné';">Scanné</button>
+          <button type="button" class="status-pill rounded-full bg-forest/5 px-3 py-1.5 text-xs text-ink/60 hover:bg-forest/10"
+            hx-get="{% url 'events:participants_table' event.id %}" hx-target="#participants-table" hx-vals='{"status": "Annulé"}'
+            onclick="document.getElementById('status-field').value='Annulé';">Annulé</button>
+        </div>
+        <input type="hidden" id="status-field" value="">
+      </div>
+      <div id="participants-table"
+           hx-get="{% url 'events:participants_table' event.id %}"
+           hx-trigger="load"
+           hx-target="this">
+        <p class="px-5 py-8 text-center text-ink/40">Chargement…</p>
+      </div>
+    </div>
+
+  {% elif tab == "stats" %}
+    <div class="rounded-stub border border-line bg-white p-6">
+      <h2 class="font-display text-lg text-ink">Entrées par heure — jour J</h2>
+      {% if hourly %}
+        <div class="mt-6 flex h-48 items-end gap-3">
+          {% for point in hourly %}
+            <div class="flex flex-1 flex-col items-center gap-2">
+              <div class="w-full rounded-t-md bg-forest" style="height: {{ point.bar_height }}%"></div>
+              <span class="font-mono text-[10px] text-ink/40">{{ point.hour|date:"H:i" }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="mt-4 text-sm text-ink/50">Aucun scan enregistré pour l'instant.</p>
+      {% endif %}
+    </div>
+
+  {% elif tab == "export" %}
+    <div class="rounded-stub border border-line bg-white p-6">
+      <h2 class="font-display text-lg text-ink">Exporter la liste des participants</h2>
+      <p class="mt-1 text-sm text-ink/60">
+        Génère un fichier CSV avec noms, emails, catégories de billets et statuts de scan.
+      </p>
+      <div class="mt-4">
+        <a href="{% url 'events:export_participants_csv' event.id %}" class="flex w-fit items-center gap-2 rounded-full bg-forest px-4 py-2.5 text-sm font-medium text-ivory hover:bg-forest-light">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Exporter en CSV
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

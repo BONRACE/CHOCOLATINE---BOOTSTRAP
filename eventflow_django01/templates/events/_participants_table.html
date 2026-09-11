@@ -1,0 +1,41 @@
+<table class="w-full text-left text-sm">
+  <thead class="bg-forest/5 text-xs uppercase tracking-wide text-ink/50">
+    <tr>
+      <th class="px-5 py-3 font-medium">Participant</th>
+      <th class="px-5 py-3 font-medium">Catégorie</th>
+      <th class="px-5 py-3 font-medium">Statut</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-line">
+    {% for row in rows %}
+      <tr class="hover:bg-forest/5">
+        <td class="px-5 py-3">
+          <div class="flex items-center gap-3">
+            {% if row.ticket.holder_photo %}
+              <img src="{{ row.ticket.holder_photo.url }}" alt="" class="h-8 w-8 rounded-full object-cover">
+            {% else %}
+              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-forest/10 text-xs font-medium text-forest">
+                {{ row.name|slice:":1" }}
+              </div>
+            {% endif %}
+            <div>
+              <p class="font-medium text-ink">{{ row.name }}</p>
+              <p class="text-xs text-ink/40">{{ row.ticket.order.buyer_email }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="px-5 py-3 text-ink/60">{{ row.category }}</td>
+        <td class="px-5 py-3">
+          <span class="rounded-full px-2.5 py-1 text-xs font-medium
+            {% if row.status == 'Payé' %}bg-forest/10 text-forest
+            {% elif row.status == 'Scanné' %}bg-gold/20 text-gold-dim
+            {% else %}bg-coral/10 text-coral{% endif %}">
+            {{ row.status }}
+          </span>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="px-5 py-8 text-center text-ink/40">Aucun participant trouvé.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
