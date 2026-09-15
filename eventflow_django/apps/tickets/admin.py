@@ -24,5 +24,6 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ("id", "order", "status", "scanned_at")
-    list_filter = ("status",)
+    list_display = ("id", "order", "ticket_category", "holder_first_name", "holder_last_name", "status", "scanned_at")
+    list_filter = ("status", "ticket_category")
+    search_fields = ("holder_first_name", "holder_last_name", "order__buyer_full_name")

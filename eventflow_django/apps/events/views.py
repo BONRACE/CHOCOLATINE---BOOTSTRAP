@@ -1,6 +1,7 @@
 import csv
+from functools import wraps
 
-from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncHour
 from django.http import HttpResponse
@@ -13,11 +14,24 @@ from .forms import EventGeneralInfoForm, TicketCategoryFormSet
 from .models import Event, TicketCategory
 
 
-def _organizer_required(user):
-    return user.is_authenticated and (user.is_organizer() or user.is_superuser)
+def organizer_required(view_func):
+    """Comme @login_required, mais exige en plus le rôle organisateur — un
+    compte spectateur authentifié ne doit pas pouvoir accéder au dashboard
+    ni créer d'événement (il n'a pas d'Organization rattachée)."""
+
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(f"/accounts/login/?next={request.path}")
+        if not (request.user.is_organizer() or request.user.is_superuser):
+            messages.error(request, "Cette page est réservée aux comptes organisateur.")
+            return redirect("accounts:signup_organizer")
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 
-@login_required
+@organizer_required
 def dashboard(request):
     """2.1 — Dashboard analytique : KPIs + tableau des événements."""
     events = Event.objects.filter(organization=request.user.organization).order_by("-starts_at")
@@ -40,7 +54,7 @@ def dashboard(request):
     return render(request, "events/dashboard.html", context)
 
 
-@login_required
+@organizer_required
 def event_create_step1(request):
     """2.2 — Étape 1/2 du formulaire multi-étapes : informations générales."""
     if request.method == "POST":
@@ -69,7 +83,7 @@ def _unique_slug(title):
     return slug
 
 
-@login_required
+@organizer_required
 def event_create_step2(request, event_id):
     """2.2 — Étape 2/2 : formset dynamique des catégories de billets."""
     event = get_object_or_404(Event, id=event_id, organization=request.user.organization)
@@ -98,7 +112,7 @@ def event_create_step2(request, event_id):
     return render(request, "events/event_form_step2.html", {"event": event, "formset": formset})
 
 
-@login_required
+@organizer_required
 def event_manage(request, event_id):
     """2.3 — Gestion d'un événement : participants / statistiques / export."""
     event = get_object_or_404(Event, id=event_id, organization=request.user.organization)
@@ -120,13 +134,15 @@ def _participant_status(ticket):
 def _participants_queryset(event, request):
     tickets = (
         Ticket.objects.filter(order__event=event, order__status=Order.Status.PAID)
-        .select_related("order")
+        .select_related("order", "ticket_category")
         .order_by("-created_at")
     )
     query = request.GET.get("q", "").strip()
     if query:
         tickets = tickets.filter(
-            Q(holder_name__icontains=query) | Q(order__buyer_full_name__icontains=query)
+            Q(holder_first_name__icontains=query)
+            | Q(holder_last_name__icontains=query)
+            | Q(order__buyer_full_name__icontains=query)
         )
     status = request.GET.get("status", "").strip()
     if status:
@@ -136,13 +152,19 @@ def _participants_queryset(event, request):
     return tickets
 
 
+@organizer_required
 def participants_table(request, event_id):
     """Partiel HTMX : table des participants, filtrée par recherche/statut
     (voir templates/events/_participants_table.html)."""
     event = get_object_or_404(Event, id=event_id, organization=request.user.organization)
     tickets = _participants_queryset(event, request)
     rows = [
-        {"ticket": t, "name": t.holder_name or t.order.buyer_full_name, "status": _participant_status(t)}
+        {
+            "ticket": t,
+            "name": t.holder_full_name,
+            "category": t.ticket_category.name if t.ticket_category else "—",
+            "status": _participant_status(t),
+        }
         for t in tickets
     ]
     return render(request, "events/_participants_table.html", {"rows": rows})
@@ -163,28 +185,31 @@ def _hourly_scan_counts(event):
     return points
 
 
-@login_required
+@organizer_required
 def export_participants_csv(request, event_id):
     """2.3, onglet Export — génère un CSV à la volée."""
     event = get_object_or_404(Event, id=event_id, organization=request.user.organization)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="participants-{event.slug}.csv"'
     writer = csv.writer(response)
-    writer.writerow(["Nom", "Email", "Téléphone", "Catégorie", "Statut", "Billet ID"])
+    writer.writerow([
+        "Nom", "Profession", "Ville", "Pays", "Email acheteur", "Téléphone acheteur",
+        "Catégorie", "Statut", "Billet ID",
+    ])
     tickets = (
         Ticket.objects.filter(order__event=event, order__status=Order.Status.PAID)
-        .select_related("order")
+        .select_related("order", "ticket_category")
     )
     for t in tickets:
-        category_names = ", ".join(
-            item.ticket_category.name for item in t.order.items.all()
-        )
         writer.writerow(
             [
-                t.holder_name or t.order.buyer_full_name,
+                t.holder_full_name,
+                t.get_holder_profession_display_label(),
+                t.holder_city,
+                t.holder_country,
                 t.order.buyer_email,
                 t.order.buyer_phone,
-                category_names,
+                t.ticket_category.name if t.ticket_category else "",
                 _participant_status(t),
                 str(t.id),
             ]

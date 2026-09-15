@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Créer votre compte — EventFlow{% endblock %}
+
+{% block content %}
+<main class="flex min-h-screen items-center justify-center bg-forest px-6 py-16">
+  <div class="w-full max-w-md">
+    <div class="mb-8 text-center">
+      <p class="font-mono text-xs uppercase tracking-[0.16em] text-gold/80">Espace spectateur</p>
+      <h1 class="mt-2 font-display text-2xl italic text-ivory">Créer votre compte</h1>
+      <p class="mt-2 text-sm text-ivory/60">
+        Retrouvez tous vos billets et téléchargez-les à tout moment.
+      </p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-4 rounded-stub border border-ivory/10 bg-forest-dark/60 p-6">
+      {% csrf_token %}
+      {% for field in form %}
+        <div>
+          <label class="text-xs font-medium text-ivory/60">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}
+            <p class="mt-1 text-xs text-coral">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="w-full rounded-full bg-gold py-3 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+        Créer mon compte
+      </button>
+    </form>
+
+    <p class="mt-5 text-center text-sm text-ivory/50">
+      Déjà inscrit ?
+      <a href="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="text-gold hover:underline">
+        Connectez-vous
+      </a>
+      · <a href="{% url 'accounts:signup_organizer' %}" class="text-gold hover:underline">Vous êtes organisateur ?</a>
+    </p>
+  </div>
+</main>
+{% endblock %}

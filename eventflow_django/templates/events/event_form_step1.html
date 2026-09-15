@@ -44,6 +44,13 @@
         {{ form.ends_at }}
       </div>
     </div>
+    <div>
+      <label class="text-sm font-medium text-ink" for="{{ form.ticket_sales_deadline.id_for_label }}">
+        Date limite d'achat des billets <span class="font-normal text-ink/40">(optionnel)</span>
+      </label>
+      {{ form.ticket_sales_deadline }}
+      <p class="mt-1 text-xs text-ink/40">Laissez vide pour vendre jusqu'au début de l'événement.</p>
+    </div>
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label class="text-sm font-medium text-ink" for="{{ form.venue_name.id_for_label }}">Lieu</label>
@@ -61,6 +68,10 @@
     <div>
       <label class="text-sm font-medium text-ink">Image de couverture</label>
       {{ form.cover_image }}
+    </div>
+    <div>
+      <label class="text-sm font-medium text-ink" for="{{ form.currency.id_for_label }}">Devise</label>
+      {{ form.currency }}
     </div>
 
     <div class="flex justify-end pt-2">

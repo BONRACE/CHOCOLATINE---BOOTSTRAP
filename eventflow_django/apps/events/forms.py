@@ -28,6 +28,7 @@ class EventGeneralInfoForm(forms.ModelForm):
         fields = [
             "title", "description", "category", "city", "venue_name",
             "address", "cover_image", "starts_at", "ends_at",
+            "ticket_sales_deadline", "currency",
         ]
         widgets = {
             "title": forms.TextInput(attrs={"class": INPUT, "placeholder": "Ex. Nuit Afrobeat"}),
@@ -38,18 +39,24 @@ class EventGeneralInfoForm(forms.ModelForm):
             "cover_image": forms.ClearableFileInput(attrs={"class": "mt-1.5 text-sm"}),
             "starts_at": forms.DateTimeInput(attrs={"class": INPUT, "type": "datetime-local"}),
             "ends_at": forms.DateTimeInput(attrs={"class": INPUT, "type": "datetime-local"}),
+            "ticket_sales_deadline": forms.DateTimeInput(attrs={"class": INPUT, "type": "datetime-local"}),
+            # Champ libre plutôt qu'une liste figée : la plateforme n'est pas
+            # limitée au FCFA, l'organisateur indique le code (XOF, EUR,
+            # USD, NGN, GHS…) adapté à son pays.
+            "currency": forms.TextInput(attrs={"class": INPUT, "placeholder": "XOF, EUR, USD, NGN…"}),
         }
 
 
 class TicketCategoryForm(forms.ModelForm):
     class Meta:
         model = TicketCategory
-        fields = ["name", "description", "unit_price", "quantity"]
+        fields = ["name", "description", "unit_price", "quantity", "group_size"]
         widgets = {
             "name": forms.TextInput(attrs={"class": INPUT, "placeholder": "VIP"}),
             "description": forms.TextInput(attrs={"class": INPUT, "placeholder": "Optionnel"}),
             "unit_price": forms.NumberInput(attrs={"class": INPUT, "placeholder": "10000"}),
             "quantity": forms.NumberInput(attrs={"class": INPUT, "placeholder": "200"}),
+            "group_size": forms.Select(attrs={"class": INPUT}),
         }
 
 

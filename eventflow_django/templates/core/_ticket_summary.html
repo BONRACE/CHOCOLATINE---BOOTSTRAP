@@ -2,14 +2,19 @@
 {% if lines %}
   <div class="mt-4 flex items-center justify-between border-t border-line pt-4">
     <span class="text-sm text-ink/60">Sous-total</span>
-    <span class="font-mono text-lg font-medium text-ink">{{ subtotal|intcomma }} FCFA</span>
+    <span class="font-mono text-lg font-medium text-ink">{{ subtotal|intcomma }} {{ event.currency }}</span>
   </div>
   {% if total_selected %}
-    <p class="mt-1 text-xs text-ink/50">{{ total_selected }} billet{{ total_selected|pluralize }} sélectionné{{ total_selected|pluralize }}</p>
+    <p class="mt-1 text-xs text-ink/50">
+      {{ total_selected }} billet{{ total_selected|pluralize }}
+      {% if total_participants and total_participants != total_selected %}
+        &middot; {{ total_participants }} participant{{ total_participants|pluralize }} au total
+      {% endif %}
+    </p>
   {% endif %}
 {% else %}
   <div class="mt-4 flex items-center justify-between border-t border-line pt-4">
     <span class="text-sm text-ink/60">Sous-total</span>
-    <span class="font-mono text-lg font-medium text-ink">0 FCFA</span>
+    <span class="font-mono text-lg font-medium text-ink">0 {{ event.currency }}</span>
   </div>
 {% endif %}

@@ -182,15 +182,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ---------- Feedback visuel plein écran ----------
 
-function showFeedback(kind, title, subtitle) {
+function showFeedback(kind, title, subtitle, photoUrl) {
   const overlay = document.getElementById("feedback-overlay");
   const validIcon = document.getElementById("feedback-icon-valid");
   const invalidIcon = document.getElementById("feedback-icon-invalid");
+  const photoEl = document.getElementById("feedback-photo");
 
   overlay.classList.remove("hidden");
   overlay.classList.add("flex");
   overlay.style.backgroundColor = kind === "valid" ? "#0B4A32" : "#E2572B";
-  validIcon.classList.toggle("hidden", kind !== "valid");
+
+  // La photo n'est montrée que pour un billet valide : c'est elle qui
+  // permet à l'agent de vérifier visuellement l'identité au contrôle,
+  // comme sur un visa — elle prime alors sur la grosse icône de validation.
+  if (photoEl) {
+    if (kind === "valid" && photoUrl) {
+      photoEl.src = photoUrl;
+      photoEl.classList.remove("hidden");
+      validIcon.classList.add("hidden");
+    } else {
+      photoEl.classList.add("hidden");
+      validIcon.classList.toggle("hidden", kind !== "valid");
+    }
+  } else {
+    validIcon.classList.toggle("hidden", kind !== "valid");
+  }
   invalidIcon.classList.toggle("hidden", kind === "valid");
   document.getElementById("feedback-title").textContent = title;
   document.getElementById("feedback-subtitle").textContent = subtitle || "";
@@ -200,7 +216,7 @@ function showFeedback(kind, title, subtitle) {
   window.setTimeout(() => {
     overlay.classList.add("hidden");
     overlay.classList.remove("flex");
-  }, 1800);
+  }, 2400);
 }
 
 function bumpCounter() {
@@ -264,7 +280,7 @@ async function handleDecodedText(text) {
         body: JSON.stringify({ payload, event_id: EVENT_ID, offline_id: offlineId }),
       });
       const data = await res.json();
-      applyResult(data.result, data.holder_name, data.already_scanned_at);
+      applyResult(data.result, data.holder, data.already_scanned_at);
       return;
     } catch (err) {
       // Le réseau vient de tomber entre la détection online et l'appel fetch :
@@ -280,15 +296,19 @@ async function handleDecodedText(text) {
     result: local.result,
     scanned_at: new Date().toISOString(),
   });
+  // Hors-ligne, le manifeste local ne contient que les signatures (pas les
+  // photos, pour rester léger) : pas de "holder" à afficher dans ce cas.
   applyResult(local.result, null, local.already_scanned_at);
 }
 
-function applyResult(result, holderName, alreadyScannedAt) {
+function applyResult(result, holder, alreadyScannedAt) {
   if (result === "VALID") {
     bumpCounter();
-    showFeedback("valid", holderName || "Billet valide");
+    const subtitle = holder ? [holder.category, holder.profession].filter(Boolean).join(" · ") : "";
+    showFeedback("valid", (holder && holder.name) || "Billet valide", subtitle, holder && holder.photo_url);
   } else if (result === "ALREADY_SCANNED") {
-    showFeedback("invalid", `Billet déjà scanné${alreadyScannedAt ? " à " + alreadyScannedAt : ""}`);
+    const who = holder && holder.name ? `${holder.name} — ` : "";
+    showFeedback("invalid", `${who}Billet déjà scanné${alreadyScannedAt ? " à " + alreadyScannedAt : ""}`);
   } else {
     showFeedback("invalid", ERROR_MESSAGES[result] || "Billet inexistant");
   }

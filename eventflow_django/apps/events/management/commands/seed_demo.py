@@ -29,6 +29,21 @@ class Command(BaseCommand):
             agent.set_password("eventflow123")
             agent.save()
 
+        spectator, created = User.objects.get_or_create(
+            username="spectateur",
+            defaults={
+                "role": User.Role.SPECTATOR,
+                "email": "spectateur@eventflow.bj",
+                "first_name": "Aïcha",
+                "last_name": "Zannou",
+                "sexe": User.Sexe.FEMME,
+                "profession": "FONCTIONNAIRE",
+            },
+        )
+        if created:
+            spectator.set_password("eventflow123")
+            spectator.save()
+
         event, _ = Event.objects.get_or_create(
             slug="afro-nation-cotonou",
             defaults={
@@ -58,6 +73,11 @@ class Command(BaseCommand):
                         event=event, name="VIP", description="Accès lounge + boissons incluses",
                         unit_price=60000, quantity=150, quantity_sold=52,
                     ),
+                    TicketCategory(
+                        event=event, name="Pack Famille", description="4 entrées Standard au même prix",
+                        unit_price=90000, quantity=100, quantity_sold=18,
+                        group_size=TicketCategory.GroupSize.GROUP_4,
+                    ),
                 ]
             )
 
@@ -65,5 +85,5 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             "Données de démo créées : organisateur/eventflow123, agent/eventflow123, "
-            f"événement « {event.title} »."
+            f"spectateur/eventflow123, événement « {event.title} »."
         ))

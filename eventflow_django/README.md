@@ -61,17 +61,79 @@ signature du QR code à celle du manifeste local — la validation fonctionne
 donc **entièrement hors-ligne**. En ligne, `POST /scanner/api/verify/`
 revérifie côté serveur et fait autorité sur les doublons entre agents.
 
+## Le billet comme "visa d'événement"
+
+Chaque billet porte l'identité de la personne qui y assiste (et non plus
+seulement celle de l'acheteur) :
+
+- **Nom, prénom, profession, ville, pays, photo** — collectés à l'étape de
+  checkout via `apps/tickets/forms.py::ParticipantForm`. La liste de
+  professions (`apps/tickets/choices.py::PROFESSION_CHOICES`) couvre les
+  catégories courantes, dont "Fonctionnaire d'État" ; la liste des pays
+  reconnus par l'ONU est fournie pour le champ pays, tandis que la ville
+  reste en texte libre — la plateforme fonctionne donc pour n'importe quel
+  pays, pas seulement le Bénin. La devise de chaque événement est également
+  libre (`Event.currency`, ex. XOF, EUR, USD, NGN…), réglée par
+  l'organisateur à la création.
+- **Option personnelle ou groupe de 4** — une catégorie de billet a un
+  `group_size` (1 ou 4, voir `TicketCategory.GroupSize`). Acheter une unité
+  d'une catégorie "groupe" fait apparaître 4 blocs participants au
+  checkout, chacun avec sa propre photo/identité, et génère 4 billets
+  individuels scannables séparément.
+- **PDF "visa"** (`apps/tickets/services.py::generate_ticket_pdf`) — photo,
+  identité, profession, ville/pays, type de billet et QR code sur un même
+  document, au format A6.
+- **Contrôle d'accès visuel** — `POST /scanner/api/verify/` renvoie la
+  photo, la profession et le type de billet du porteur : l'agent peut
+  comparer visuellement la personne devant lui à la photo du visa, comme un
+  vrai contrôle d'identité. Le manifeste hors-ligne (IndexedDB) ne contient
+  que les signatures — pas les photos — pour rester léger ; un scan
+  hors-ligne affiche donc un statut valide/invalide mais sans photo tant
+  que l'agent n'est pas repassé en ligne.
+
+## Comptes : spectateur, organisateur, agent
+
+Trois types de compte, tous distincts de la connexion Django admin :
+
+- **Spectateur** (`/accounts/inscription/`) — nom, prénoms, sexe,
+  profession, photo, identifiants. Donne accès à `/accounts/mes-billets/`
+  (historique des commandes payées, avec bouton PDF et lien vers la version
+  numérique de chaque billet) et pré-remplit automatiquement le
+  participant lors de l'achat d'un billet personnel unique.
+- **Organisateur** (`/accounts/inscription/organisateur/`) — mêmes champs
+  d'identité + nom et logo de sa structure (`Organization.logo`, réutilisé
+  comme "logo de l'organisateur" sur chaque billet PDF). Un compte
+  organisateur est **obligatoire** pour publier un événement :
+  `event_create_step1` (et toutes les vues du dashboard) sont protégées par
+  le décorateur `apps/events/views.py::organizer_required`, qui redirige un
+  visiteur non connecté vers la connexion et un spectateur connecté vers
+  l'inscription organisateur (jamais l'inverse — un compte existant ne
+  peut pas se re-inscrire par-dessus lui-même).
+- **Agent** — pas d'auto-inscription : créé par un organisateur (ou via
+  `/admin/`) et affecté à un événement via `EventAgent`, voir
+  `/scanner/login/`.
+
+La connexion `/accounts/login/` est commune aux spectateurs et
+organisateurs et redirige selon le rôle (`accounts:my_tickets` ou
+`events:dashboard`).
+
 ## 5. Parcours couverts (testés de bout en bout dans cet environnement)
 
 - **Public** : catalogue avec recherche/filtres HTMX (`/`) → détail événement
-  avec widget d'achat recalculé en HTMX (`/events/<slug>/`) → checkout invité
-  (`/checkout/<cart_id>/`) → confirmation avec QR + PDF téléchargeable
+  avec widget d'achat recalculé en HTMX (`/events/<slug>/`, fermé
+  automatiquement après `Event.ticket_sales_deadline` si renseignée) →
+  checkout invité ou spectateur connecté (pré-rempli), avec informations
+  "visa" par participant, photo comprise (`/checkout/<cart_id>/`) →
+  confirmation avec QR + PDF téléchargeable, un billet par personne
   (`/tickets/confirmation/<uuid>/`)
-- **Organisateur** : connexion (`/accounts/login/`) → dashboard KPIs
-  (`/dashboard/`) → création d'événement en 2 étapes avec formset dynamique
-  de catégories (`/dashboard/new/`) → gestion d'un événement : participants
-  (table HTMX filtrable), statistiques en direct, export CSV
-  (`/dashboard/<id>/manage/`)
+- **Spectateur** : inscription/connexion → achat (voir ci-dessus) →
+  historique avec téléchargement PDF et version numérique
+  (`/accounts/mes-billets/`)
+- **Organisateur** : inscription/connexion (`/accounts/login/`) → dashboard
+  KPIs (`/dashboard/`) → création d'événement en 2 étapes avec devise, date
+  limite d'achat et formset dynamique de catégories (`/dashboard/new/`) →
+  gestion d'un événement : participants (table HTMX filtrable),
+  statistiques en direct, export CSV (`/dashboard/<id>/manage/`)
 - **Scanner** : connexion agent + sélection d'événement (`/scanner/login/`)
   → écran de scan caméra avec badge réseau et compteur
   (`/scanner/view/<id>/`) → vérification en ligne (`/scanner/api/verify/`)
@@ -95,7 +157,9 @@ python manage.py runserver
 
 **Comptes créés par `seed_demo`** :
 - Organisateur : `organisateur` / `eventflow123` → `/accounts/login/` puis `/dashboard/`
+- Spectateur : `spectateur` / `eventflow123` → `/accounts/login/` puis `/accounts/mes-billets/`
 - Agent : `agent` / `eventflow123` → `/scanner/login/` (affecté à l'événement de démo via `EventAgent`)
+- L'événement de démo inclut une catégorie "Pack Famille" (`group_size=4`) pour tester le parcours groupe
 
 L'accès caméra du scanner nécessite HTTPS ou `localhost` — fonctionne donc
 directement en développement, mais demande un certificat TLS une fois

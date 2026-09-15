@@ -13,10 +13,30 @@
 
   {% for item in tickets %}
     <div class="ticket-notch relative mx-auto mt-8 max-w-sm overflow-hidden rounded-stub border border-line bg-white text-left shadow-lg">
-      <div class="bg-forest px-6 py-4">
+      <div class="relative bg-forest px-6 py-4">
+        {% if order.event.organization.logo %}
+          <img src="{{ order.event.organization.logo.url }}" alt="" class="absolute right-4 top-4 h-8 w-8 rounded-full border border-gold/40 bg-ivory object-cover">
+        {% endif %}
         <p class="font-mono text-[10px] uppercase tracking-widest text-gold/70">{{ order.event.category }}</p>
         <p class="mt-1 font-display text-xl italic text-ivory">{{ order.event.title }}</p>
         <p class="mt-1 text-xs text-ivory/60">{{ order.event.starts_at|date:"l d F" }} &middot; {{ order.event.venue_name }}</p>
+      </div>
+      <div class="perforation"></div>
+      <div class="flex flex-col items-center gap-3 px-6 py-5">
+        {% if item.ticket.holder_photo %}
+          <img src="{{ item.ticket.holder_photo.url }}" alt="" class="h-16 w-16 rounded-full border-2 border-gold object-cover">
+        {% else %}
+          <div class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gold/40 bg-forest/5 text-lg font-display italic text-forest/50">
+            {{ item.ticket.holder_first_name|slice:":1" }}{{ item.ticket.holder_last_name|slice:":1" }}
+          </div>
+        {% endif %}
+        <p class="font-display text-lg text-ink">{{ item.ticket.holder_full_name }}</p>
+        <div class="flex flex-wrap items-center justify-center gap-1.5 text-xs text-ink/50">
+          <span class="rounded-full bg-forest/10 px-2.5 py-1 font-medium text-forest">{{ item.ticket.ticket_category.name }}</span>
+          {% if item.ticket.holder_profession %}<span>{{ item.ticket.get_holder_profession_display_label }}</span>{% endif %}
+          {% if item.ticket.holder_sexe %}<span>&middot; {{ item.ticket.get_holder_sexe_display_label }}</span>{% endif %}
+          {% if item.ticket.holder_city %}<span>&middot; {{ item.ticket.holder_city }}, {{ item.ticket.holder_country }}</span>{% endif %}
+        </div>
       </div>
       <div class="perforation"></div>
       <div class="flex flex-col items-center gap-3 px-6 py-6">

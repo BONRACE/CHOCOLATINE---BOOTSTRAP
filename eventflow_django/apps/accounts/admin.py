@@ -15,5 +15,5 @@ class EventFlowUserAdmin(UserAdmin):
     list_display = ("username", "email", "role", "organization", "is_staff")
     list_filter = ("role", "is_staff")
     fieldsets = UserAdmin.fieldsets + (
-        ("EventFlow", {"fields": ("role", "phone", "organization")}),
+        ("EventFlow", {"fields": ("role", "phone", "sexe", "profession", "photo", "organization")}),
     )

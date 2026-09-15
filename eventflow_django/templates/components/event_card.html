@@ -23,7 +23,7 @@
       <p class="mt-1 text-sm text-ink/60">{{ event.venue_name }} &middot; {{ event.city }} &middot; {{ event.starts_at|date:"H:i" }}</p>
       <div class="mt-3 flex items-baseline justify-between border-t border-line pt-3">
         <span class="text-xs text-ink/50">à partir de</span>
-        <span class="font-mono text-sm font-medium text-forest">{{ event.min_price|intcomma }} FCFA</span>
+        <span class="font-mono text-sm font-medium text-forest">{{ event.min_price|intcomma }} {{ event.currency }}</span>
       </div>
     </div>
   </article>

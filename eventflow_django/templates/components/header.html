@@ -9,11 +9,33 @@
     </a>
     <nav class="hidden items-center gap-7 text-sm text-ivory/80 md:flex">
       <a href="{% url 'core:home' %}" class="hover:text-gold">Découvrir</a>
-      <a href="{% url 'events:dashboard' %}" class="hover:text-gold">Espace organisateur</a>
+      {% if request.user.is_authenticated and request.user.is_spectator %}
+        <a href="{% url 'accounts:my_tickets' %}" class="hover:text-gold">Mes billets</a>
+      {% endif %}
+      {% if request.user.is_authenticated and request.user.is_organizer %}
+        <a href="{% url 'events:dashboard' %}" class="hover:text-gold">Espace organisateur</a>
+      {% endif %}
       <a href="{% url 'scanner:login' %}" class="hover:text-gold">Scanner d'accès</a>
     </nav>
-    <a href="{% url 'events:event_create_step1' %}" class="rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
-      Créer un événement
-    </a>
+    <div class="flex items-center gap-3">
+      {% if request.user.is_authenticated %}
+        <span class="hidden text-sm text-ivory/60 sm:inline">{{ request.user.first_name|default:request.user.username }}</span>
+        <a href="{% url 'accounts:logout' %}" class="text-sm text-ivory/60 hover:text-gold">Déconnexion</a>
+        {% if request.user.is_organizer %}
+          <a href="{% url 'events:event_create_step1' %}" class="rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+            Créer un événement
+          </a>
+        {% else %}
+          <a href="{% url 'accounts:signup_organizer' %}?next={% url 'events:event_create_step1' %}" class="rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+            Devenir organisateur
+          </a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'accounts:login' %}" class="text-sm text-ivory/60 hover:text-gold">Connexion</a>
+        <a href="{% url 'accounts:signup_organizer' %}?next={% url 'events:event_create_step1' %}" class="rounded-full bg-gold px-4 py-2 text-sm font-medium text-forest-dark transition-colors hover:bg-gold-pale">
+          Créer un événement
+        </a>
+      {% endif %}
+    </div>
   </div>
 </header>

@@ -28,6 +28,15 @@ class Event(models.Model):
     cover_image = models.ImageField(upload_to="events/covers/", blank=True, null=True)
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
+    # Date limite au-delà de laquelle les billets ne sont plus en vente,
+    # même si l'événement n'a pas encore eu lieu (ex. clôture des ventes
+    # 24h avant). Facultative — si vide, la vente reste ouverte jusqu'au
+    # début de l'événement.
+    ticket_sales_deadline = models.DateTimeField(blank=True, null=True)
+    # Code de devise (ISO 4217, ex. XOF, EUR, USD, NGN…) : la plateforme
+    # n'est pas figée sur le FCFA, l'organisateur choisit la devise
+    # adaptée à son pays lors de la création de l'événement.
+    currency = models.CharField(max_length=10, default="XOF")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -59,15 +68,31 @@ class Event(models.Model):
         sold = totals["sold"] or 0
         return round((sold / quota) * 100) if quota else 0
 
+    @property
+    def sales_closed(self):
+        if not self.ticket_sales_deadline:
+            return False
+        from django.utils import timezone
+
+        return timezone.now() > self.ticket_sales_deadline
+
 
 class TicketCategory(models.Model):
+    class GroupSize(models.IntegerChoices):
+        PERSONAL = 1, "Personnel — 1 personne"
+        GROUP_4 = 4, "Groupe — 4 personnes"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="ticket_categories")
     name = models.CharField(max_length=80)  # VIP, Standard, Early Bird…
     description = models.CharField(max_length=255, blank=True)
-    unit_price = models.PositiveIntegerField(help_text="Prix unitaire en FCFA")
+    unit_price = models.PositiveIntegerField(help_text="Prix unitaire, dans la devise de l'événement")
     quantity = models.PositiveIntegerField(help_text="Jauge maximale dédiée")
     quantity_sold = models.PositiveIntegerField(default=0)
+    # Une "unité" achetée correspond à group_size participant(e)s : 1 pour un
+    # billet personnel, 4 pour un pack groupe — chacun avec ses propres
+    # informations de "visa" (nom, profession, photo…), voir apps/tickets.
+    group_size = models.PositiveSmallIntegerField(choices=GroupSize.choices, default=GroupSize.PERSONAL)
     sales_start = models.DateTimeField(blank=True, null=True)
     sales_end = models.DateTimeField(blank=True, null=True)
 
@@ -85,6 +110,10 @@ class TicketCategory(models.Model):
     @property
     def sold_out(self):
         return self.remaining <= 0
+
+    @property
+    def is_group(self):
+        return self.group_size > 1
 
 
 class EventAgent(models.Model):

@@ -50,6 +50,14 @@
   </div>
 
   <div class="md:sticky md:top-24 md:self-start">
+    {% if event.sales_closed %}
+      <div class="rounded-stub border border-line bg-white p-5 text-center">
+        <h3 class="font-display text-lg text-ink">Ventes closes</h3>
+        <p class="mt-2 text-sm text-ink/60">
+          La date limite d'achat des billets pour cet événement est dépassée.
+        </p>
+      </div>
+    {% else %}
     <form
       id="ticket-form"
       method="post" action="{% url 'core:start_checkout' event.slug %}"
@@ -65,9 +73,16 @@
           {% for tc in event.ticket_categories.all %}
             <div class="flex items-center justify-between gap-4 py-4">
               <div class="min-w-0">
-                <p class="font-medium text-ink">{{ tc.name }}</p>
+                <p class="font-medium text-ink">
+                  {{ tc.name }}
+                  {% if tc.is_group %}
+                    <span class="ml-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold-dim align-middle">Pack {{ tc.group_size }} pers.</span>
+                  {% endif %}
+                </p>
                 {% if tc.description %}<p class="text-xs text-ink/50">{{ tc.description }}</p>{% endif %}
-                <p class="mt-1 font-mono text-sm text-forest">{{ tc.unit_price|intcomma }} FCFA</p>
+                <p class="mt-1 font-mono text-sm text-forest">
+                  {{ tc.unit_price|intcomma }} {{ event.currency }}{% if tc.is_group %} <span class="text-ink/40">/ pack</span>{% endif %}
+                </p>
                 {% if not tc.sold_out and tc.remaining <= 30 %}
                   <p class="mt-0.5 text-xs text-coral">Plus que {{ tc.remaining }} places</p>
                 {% endif %}
@@ -96,6 +111,7 @@
         </button>
       </div>
     </form>
+    {% endif %}
   </div>
 </section>
 

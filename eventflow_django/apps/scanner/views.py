@@ -11,6 +11,8 @@ from django.views.decorators.http import require_POST
 
 from apps.events.models import Event, EventAgent
 from apps.tickets.models import Ticket
+from apps.tickets.services import build_offline_manifest, verify_payload
+
 from .models import ScanLog
 
 
@@ -27,7 +29,7 @@ def agent_login(request):
     """3.1 — Connexion agent + sélection de l'événement à contrôler."""
     events = Event.objects.filter(status=Event.Status.PUBLISHED).order_by("starts_at")
     error = None
-+3
+
     if request.method == "POST":
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
@@ -96,9 +98,13 @@ def verify_scan(request):
 
     ticket = None
     if valid:
-        ticket = Ticket.objects.filter(id=payload["t_id"]).select_related("order").first()
+        ticket = Ticket.objects.filter(id=payload["t_id"]).select_related(
+            "order", "ticket_category"
+        ).first()
         if ticket is None:
             reason = "NOT_FOUND"
+        elif ticket.order.status != ticket.order.Status.PAID:
+            reason = "NOT_FOUND"  # commande non payée — le billet n'a jamais été validé
         elif ticket.status == Ticket.Status.CANCELLED:
             reason = "CANCELLED_TICKET"
         elif ticket.status == Ticket.Status.SCANNED:
@@ -119,12 +125,23 @@ def verify_scan(request):
         offline_id=data.get("offline_id") or None,
     )
 
-    holder_name = ticket.holder_name or ticket.order.buyer_full_name if (ticket and reason == "VALID") else None
     already_at = None
     if reason == "ALREADY_SCANNED" and ticket and ticket.scanned_at:
         already_at = timezone.localtime(ticket.scanned_at).strftime("%H:%M")
 
-    return JsonResponse({"result": reason, "holder_name": holder_name, "already_scanned_at": already_at})
+    # En contrôle d'accès, l'agent doit pouvoir vérifier visuellement
+    # l'identité de la personne — le "visa" du billet (photo, profession,
+    # type de billet) est donc renvoyé pour tout billet valide.
+    holder = None
+    if ticket and reason in ("VALID", "ALREADY_SCANNED"):
+        holder = {
+            "name": ticket.holder_full_name,
+            "profession": ticket.get_holder_profession_display_label(),
+            "category": ticket.ticket_category.name if ticket.ticket_category else "",
+            "photo_url": ticket.holder_photo.url if ticket.holder_photo else None,
+        }
+
+    return JsonResponse({"result": reason, "holder": holder, "already_scanned_at": already_at})
 
 
 @login_required

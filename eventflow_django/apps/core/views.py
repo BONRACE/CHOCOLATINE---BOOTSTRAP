@@ -5,6 +5,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.events.models import Event
+from apps.tickets.forms import ParticipantFormSet
 from apps.tickets.models import Order, OrderItem, Ticket
 from apps.tickets.services import (
     finalize_paid_order,
@@ -103,6 +104,7 @@ def recalculate_cart(request, slug):
     ]
     subtotal = sum(line["qty"] * line["category"].unit_price for line in lines)
     total_selected = sum(line["qty"] for line in lines)
+    total_participants = sum(line["qty"] * line["category"].group_size for line in lines)
     return render(
         request,
         "core/_ticket_summary.html",
@@ -111,6 +113,7 @@ def recalculate_cart(request, slug):
             "lines": lines,
             "subtotal": subtotal,
             "total_selected": total_selected,
+            "total_participants": total_participants,
         },
     )
 
@@ -122,6 +125,10 @@ def start_checkout(request, slug):
     payée."""
     event = get_object_or_404(Event, slug=slug, status=Event.Status.PUBLISHED)
     if request.method != "POST":
+        return redirect("core:event_detail", slug=slug)
+
+    if event.sales_closed:
+        messages.error(request, "La vente de billets pour cet événement est close.")
         return redirect("core:event_detail", slug=slug)
 
     quantities = _parse_quantities(request, event)
@@ -137,9 +144,38 @@ def start_checkout(request, slug):
     return redirect("core:checkout", cart_id=cart_id)
 
 
+def _participant_slots(lines, user=None):
+    """Une "unité" achetée dans une catégorie groupe compte pour
+    `group_size` participants : on construit ici une entrée de formset par
+    participant réel, chacune rattachée à sa catégorie via un champ caché
+    (voir apps/tickets/forms.py::ParticipantForm). Pour un billet personnel
+    unique acheté par un spectateur connecté, on pré-remplit directement
+    avec les informations de son compte."""
+    slots = []
+    for line in lines:
+        category = line["category"]
+        for _ in range(line["qty"]):
+            for _ in range(category.group_size):
+                slots.append({"ticket_category_id": str(category.id)})
+
+    if len(slots) == 1 and user is not None and user.is_authenticated and user.is_spectator():
+        slots[0].update(
+            {
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "sexe": user.sexe,
+                "profession": user.profession,
+            }
+        )
+    return slots
+
+
 def checkout(request, cart_id):
-    """1.3 — Checkout invité (aucun compte requis) + choix du moyen de
-    paiement (carte, MTN/Moov/Orange Money)."""
+    """1.3 — Checkout invité (aucun compte requis) : informations de "visa"
+    de chaque participant (nom, profession, pays/ville, photo) + choix du
+    moyen de paiement (carte, MTN/Moov/Orange Money). Un spectateur connecté
+    voit son billet personnel pré-rempli et sa commande rattachée à son
+    historique ("Mes billets")."""
     cart = request.session.get("carts", {}).get(cart_id)
     if not cart:
         messages.error(request, "Votre panier a expiré, merci de resélectionner vos billets.")
@@ -153,15 +189,18 @@ def checkout(request, cart_id):
         if cid in categories
     ]
     total = sum(line["qty"] * line["category"].unit_price for line in lines)
+    slots_initial = _participant_slots(lines, user=request.user)
 
     if request.method == "POST":
         form = GuestCheckoutForm(request.POST)
-        if form.is_valid():
+        formset = ParticipantFormSet(request.POST, request.FILES, initial=slots_initial, prefix="participant")
+        if form.is_valid() and formset.is_valid():
             order = Order.objects.create(
                 event=event,
                 buyer_full_name=form.cleaned_data["full_name"],
                 buyer_email=form.cleaned_data["email"],
                 buyer_phone=form.cleaned_data["phone"],
+                buyer_user=request.user if request.user.is_authenticated else None,
                 payment_method=form.cleaned_data["payment_method"],
                 total_amount=total,
                 status=Order.Status.PENDING,
@@ -172,6 +211,19 @@ def checkout(request, cart_id):
                     ticket_category=line["category"],
                     quantity=line["qty"],
                     unit_price=line["category"].unit_price,
+                )
+            for participant in formset.cleaned_data:
+                category = categories.get(participant["ticket_category_id"])
+                Ticket.objects.create(
+                    order=order,
+                    ticket_category=category,
+                    holder_first_name=participant["first_name"],
+                    holder_last_name=participant["last_name"],
+                    holder_sexe=participant["sexe"],
+                    holder_profession=participant["profession"],
+                    holder_country=participant["country"],
+                    holder_city=participant["city"],
+                    holder_photo=participant.get("photo"),
                 )
 
             # Démo : paiement confirmé immédiatement, sans passerelle réelle.
@@ -187,12 +239,36 @@ def checkout(request, cart_id):
             request.session.modified = True
             return redirect("core:confirmation", order_uuid=order.id)
     else:
-        form = GuestCheckoutForm()
+        initial_buyer = {}
+        if request.user.is_authenticated:
+            initial_buyer = {
+                "full_name": f"{request.user.first_name} {request.user.last_name}".strip(),
+                "email": request.user.email,
+                "email_confirm": request.user.email,
+                "phone": request.user.phone,
+            }
+        form = GuestCheckoutForm(initial=initial_buyer)
+        formset = ParticipantFormSet(initial=slots_initial, prefix="participant")
+
+    # Étiquette de catégorie pour chaque bloc participant du formset (affichage
+    # uniquement — le rattachement réel se fait via le champ caché du formulaire).
+    participants = [
+        {"form": pform, "category": categories.get(pform["ticket_category_id"].value())}
+        for pform in formset.forms
+    ]
 
     return render(
         request,
         "core/checkout.html",
-        {"form": form, "event": event, "lines": lines, "total": total, "cart_id": cart_id},
+        {
+            "form": form,
+            "formset": formset,
+            "participants": participants,
+            "event": event,
+            "lines": lines,
+            "total": total,
+            "cart_id": cart_id,
+        },
     )
 
 

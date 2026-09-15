@@ -6,14 +6,81 @@
 {% include "components/header.html" %}
 
 <section class="mx-auto grid max-w-4xl gap-10 px-6 py-12 md:grid-cols-[1.3fr_1fr]">
-  <form method="post" class="space-y-8">
+  <form method="post" enctype="multipart/form-data" class="space-y-8">
     {% csrf_token %}
+
     <div>
-      <p class="font-mono text-xs uppercase tracking-wide text-forest">Étape unique &middot; Aucun compte requis</p>
-      <h1 class="mt-2 font-display text-2xl text-ink">Vos informations</h1>
+      <p class="font-mono text-xs uppercase tracking-wide text-forest">Checkout invité &middot; Aucun compte requis</p>
+      <h1 class="mt-2 font-display text-2xl text-ink">Informations des participants</h1>
+      <p class="mt-1 text-sm text-ink/60">
+        Chaque billet est un visa nominatif — merci de renseigner qui assistera à l'événement.
+      </p>
+    </div>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+      <p class="text-sm text-coral">{{ formset.non_form_errors }}</p>
+    {% endif %}
+
+    <div class="space-y-4">
+      {% regroup participants by category as category_groups %}
+      {% for group in category_groups %}
+        <div class="rounded-stub border border-line bg-white p-5">
+          <h3 class="font-display text-base text-ink">
+            {{ group.grouper.name }}
+            {% if group.grouper.is_group %}
+              <span class="ml-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold-dim align-middle">Pack {{ group.grouper.group_size }} pers.</span>
+            {% endif %}
+          </h3>
+          <div class="mt-4 space-y-6">
+            {% for item in group.list %}
+              {% with pform=item.form %}
+              <div class="{% if not forloop.first %}border-t border-line pt-5{% endif %}">
+                <p class="mb-3 text-xs font-medium uppercase tracking-wide text-ink/40">Participant {{ forloop.counter }}</p>
+                {{ pform.ticket_category_id }}
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.first_name.label }}</label>
+                    {{ pform.first_name }}
+                    {% for error in pform.first_name.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.last_name.label }}</label>
+                    {{ pform.last_name }}
+                    {% for error in pform.last_name.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.profession.label }}</label>
+                    {{ pform.profession }}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.sexe.label }}</label>
+                    {{ pform.sexe }}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.country.label }}</label>
+                    {{ pform.country }}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.city.label }}</label>
+                    {{ pform.city }}
+                    {% for error in pform.city.errors %}<p class="mt-1 text-xs text-coral">{{ error }}</p>{% endfor %}
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-ink">{{ pform.photo.label }} <span class="font-normal text-ink/40">(optionnel)</span></label>
+                    {{ pform.photo }}
+                  </div>
+                </div>
+              </div>
+              {% endwith %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
     </div>
 
     <div class="space-y-4 rounded-stub border border-line bg-white p-5">
+      <h2 class="font-display text-lg text-ink">Vos coordonnées</h2>
       <div>
         <label class="text-sm font-medium text-ink" for="{{ form.full_name.id_for_label }}">Nom complet</label>
         {{ form.full_name }}
@@ -50,24 +117,24 @@
     </div>
 
     <button type="submit" class="w-full rounded-full bg-forest py-3.5 text-sm font-medium text-ivory transition-colors hover:bg-forest-light">
-      Payer {{ total|intcomma }} FCFA
+      Payer {{ total|intcomma }} {{ event.currency }}
     </button>
   </form>
 
-  <aside class="h-fit rounded-stub border border-line bg-white p-5">
+  <aside class="h-fit rounded-stub border border-line bg-white p-5 md:sticky md:top-24">
     <h2 class="font-display text-lg text-ink">{{ event.title }}</h2>
     <p class="mt-1 text-xs text-ink/50">{{ event.venue_name }}, {{ event.city }}</p>
     <div class="mt-4 divide-y divide-line">
       {% for line in lines %}
         <div class="flex justify-between py-2 text-sm">
           <span class="text-ink/70">{{ line.qty }} &times; {{ line.category.name }}</span>
-          <span class="font-mono text-ink">{{ line.line_total|intcomma }} FCFA</span>
+          <span class="font-mono text-ink">{{ line.line_total|intcomma }} {{ event.currency }}</span>
         </div>
       {% endfor %}
     </div>
     <div class="mt-3 flex justify-between border-t border-line pt-3">
       <span class="text-sm font-medium text-ink">Total</span>
-      <span class="font-mono text-base font-medium text-forest">{{ total|intcomma }} FCFA</span>
+      <span class="font-mono text-base font-medium text-forest">{{ total|intcomma }} {{ event.currency }}</span>
     </div>
   </aside>
 </section>
